@@ -50,26 +50,42 @@ public class UpnOsUserMapper extends AbstractOIDCProtocolMapper implements OIDCA
     protected void setClaim(IDToken token, ProtocolMapperModel mappingModel,
                             UserSessionModel userSession, KeycloakSession keycloakSession,
                             ClientSessionContext clientSessionCtx) {
-        OIDCAttributeMapperHelper.mapClaim(token, mappingModel, getOsUser(userSession));
+        var osUser = getOsUser(userSession);
+        if (!osUser.isEmpty())
+            OIDCAttributeMapperHelper.mapClaim(token, mappingModel, getOsUser(userSession));
     }
 
     @Override
     public AccessToken transformAccessToken(AccessToken token, ProtocolMapperModel mappingModel, KeycloakSession session, UserSessionModel userSession, ClientSessionContext clientSessionCtx) {
-        token.getOtherClaims().put("osUser", getOsUser(userSession));
-        setClaim(token, mappingModel, userSession, session, clientSessionCtx);
+        var osUser = getOsUser(userSession);
+        if (!osUser.isEmpty()) {
+            token.getOtherClaims().put("osUser", osUser);
+            setClaim(token, mappingModel, userSession, session, clientSessionCtx);
+        }
+
         return token;
     }
 
     @Override
     public IDToken transformIDToken(IDToken token, ProtocolMapperModel mappingModel, KeycloakSession session, UserSessionModel userSession, ClientSessionContext clientSessionCtx) {
-        token.getOtherClaims().put("osUser", getOsUser(userSession));
-        setClaim(token, mappingModel, userSession, session, clientSessionCtx);
+        var osUser = getOsUser(userSession);
+        if (!osUser.isEmpty()) {
+            token.getOtherClaims().put("osUser", osUser);
+            setClaim(token, mappingModel, userSession, session, clientSessionCtx);
+        }
+
         return token;
     }
 
     private String getOsUser(UserSessionModel session) {
         var upn = session.getUser().getFirstAttribute("userPrincipalName");
-        var data = upn.split("@");
-        return data[1].split("\\.")[0] + "\\" + data[0];
+
+        if (upn == null)
+            return "";
+        else
+        {
+            var data = upn.split("@");
+            return data[1].split("\\.")[0] + "\\" + data[0];
+        }
     }
 }
